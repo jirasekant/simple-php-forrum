@@ -1,8 +1,12 @@
 FROM php:8-apache
+RUN docker-php-ext-install mysqli
 RUN apt-get update && apt upgrade -y
 RUN docker-php-ext-install mysqli pdo pdo_mysql && docker-php-ext-enable mysqli
 ADD ./app /var/www/html
+ADD .htaccess /var/www/html
 COPY ./app/my-site.conf /etc/apache2/sites-available/my-site.conf
+
+
 # RUN echo 'SetEnv MYSQL_DB_CONNECTION ${MYSQL_DB_CONNECTION}' >> /etc/apache2/conf-enabled/environment.conf
 # RUN echo 'SetEnv MYSQL_DB_NAME ${MYSQL_DB_NAME}' >> /etc/apache2/conf-enabled/environment.conf
 # RUN echo 'SetEnv MYSQL_USER ${MYSQL_USER}' >> /etc/apache2/conf-enabled/environment.conf
