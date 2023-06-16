@@ -12,6 +12,11 @@ $queryBuilder = new QueryBuilder();
 $articleFactory = new ArticleFactory();
 $articleDataMapper = new ArticleDataMapper($database, $articleFactory, $queryBuilder);
 $articleRepository = new ArticleRepository($articleDataMapper);
+
+$commentFactory = new CommentFactory();
+$commentDataMapper = new CommentDataMapper($database, $commentFactory, $queryBuilder);
+$commentRepository = new CommentRepository($commentDataMapper);
+
 $database->connect();
 $result = $articleRepository->getAllArticles();
 
@@ -24,7 +29,25 @@ $articleId = end($segments);
 if ($articleId) {
     echo "This is the article with ID: " . $articleId;
     $result = $articleRepository->getArticleById($articleId);
+    $commentResult = $commentRepository->getAllCommentsByArticleId($articleId);
     print_r($result);
+    echo '<br><br>';
+    print_r($commentResult);
+
+    echo '<br><br>';
+    function printComments($comments, $parentID = null, $depth = 0) {
+        foreach ($comments as $comment) {
+            if ($comment->getParentId() === $parentID) {
+                // Print the comment
+                echo str_repeat('-', $depth) . ' ' . $comment->getText() . '<br>';
+    
+                // Recursively print the replies
+                printComments($comments, $comment->getId(), $depth + 1);
+            }
+        }
+    }
+    printComments($commentResult);
+
 } else {
     echo "<h1>";
     foreach ($result as $res) {

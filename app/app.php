@@ -65,19 +65,24 @@ class Comment
     private $text;
     private $publicationDate;
     private $parentId;
+    private $id;
+    private $articleId;
 
     // Constructor, getters, and setters for the properties
     //constructor
-    public function __construct($contributorName, $email, $text, $publicationDate, $parentId = null)
+
+    public function __construct($id, $contributorName, $email, $text, $publicationDate, $articleId, $parentId = null)
     {
         $this->contributorName = $contributorName;
         $this->email = $email;
         $this->text = $text;
         $this->publicationDate = $publicationDate;
         $this->parentId = $parentId;
+        $this->articleId = $articleId;
+        $this->id = $id;
     }
     //getters
-    
+
     public function getContributorName()
     {
         return $this->contributorName;
@@ -97,6 +102,10 @@ class Comment
     public function getParentId()
     {
         return $this->parentId;
+    }
+    public function getId()
+    {
+        return $this->id;
     }
 
     //setters
@@ -192,10 +201,12 @@ class ArticleDataMapper
     {
         $result = [];
         $queryResult = $this->queryBuilder->select(array('id', 'title', 'body', 'user', 'date_created'))->from('article')->where('id = ' . $id)
-                                                                                                        ->execute($this->database);
-        for ($i=0; $i < count($queryResult); $i++) {
-            $result[$i] = $this->articleFactory->createArticle($queryResult[$i]['id'], $queryResult[$i]['title'], 
-                $queryResult[$i]['body'], $queryResult[$i]['user'], $queryResult[$i]['date_created']);
+            ->execute($this->database);
+        for ($i = 0; $i < count($queryResult); $i++) {
+            $result[$i] = $this->articleFactory->createArticle(
+                $queryResult[$i]['id'], $queryResult[$i]['title'],
+                $queryResult[$i]['body'], $queryResult[$i]['user'], $queryResult[$i]['date_created']
+            );
         }
         return $result;
 
@@ -205,9 +216,11 @@ class ArticleDataMapper
     {
         $result = [];
         $queryResult = $this->queryBuilder->select(array('id', 'title', 'body', 'user', 'date_created'))->from('article')->execute($this->database);
-        for ($i=0; $i < count($queryResult); $i++) {
-            $result[$i] = $this->articleFactory->createArticle($queryResult[$i]['id'], $queryResult[$i]['title'], 
-                $queryResult[$i]['body'], $queryResult[$i]['user'], $queryResult[$i]['date_created']);
+        for ($i = 0; $i < count($queryResult); $i++) {
+            $result[$i] = $this->articleFactory->createArticle(
+                $queryResult[$i]['id'], $queryResult[$i]['title'],
+                $queryResult[$i]['body'], $queryResult[$i]['user'], $queryResult[$i]['date_created']
+            );
         }
         return $result;
 
@@ -222,26 +235,37 @@ class ArticleDataMapper
 class CommentDataMapper
 {
     private $database;
+    private $commentFactory;
     private $queryBuilder;
 
-    public function __construct(Database $database, QueryBuilder $queryBuilder)
+    public function __construct(Database $database, CommentFactory $commentFactory, QueryBuilder $queryBuilder)
     {
         $this->database = $database;
+        $this->commentFactory = $commentFactory;
         $this->queryBuilder = $queryBuilder;
     }
 
     public function fetchCommentById($id)
     {
-        return $this->queryBuilder->select('id', 'contributor_name', 'email', 'text', 'publication_date', 'parent_id')
+        return $this->queryBuilder->select('user, email, text, date_created, id, parent_id, article_id')
             ->from('comments')
-            ->where('id', '=', $id);
+            ->where('id = ' . $id);
     }
 
     public function fetchAllCommentsByArticleId($articleId)
     {
-        return $this->queryBuilder->select('id', 'contributor_name', 'email', 'text', 'publication_date', 'parent_id')
-            ->from('comments')
-            ->where('article_id', '=', $articleId)->execute();
+        $result = [];
+        $queryResult = $this->queryBuilder->select(array('user', 'email', 'text', 'date_created', 'id', 'parent_id', 'article_id'))
+            ->from('comment')
+            ->where('article_id = ' . $articleId)->execute($this->database);
+        for ($i = 0; $i < count($queryResult); $i++) {
+            $result[$i] = $this->commentFactory->createComment(
+                $queryResult[$i]['id'], $queryResult[$i]['user'], $queryResult[$i]['email'],
+                $queryResult[$i]['text'], $queryResult[$i]['date_created'], $queryResult[$i]['article_id'],
+                $queryResult[$i]['parent_id']
+            );
+        }
+        return $result;
     }
 
     public function insertComment(Comment $comment)
@@ -286,7 +310,7 @@ class CommentRepository
 
     public function getAllCommentsByArticleId($articleId)
     {
-        // Implementation details
+        return $this->dataMapper->fetchAllCommentsByArticleId($articleId);
     }
 
     public function getCommentById($id)
@@ -310,9 +334,9 @@ class ArticleFactory
 
 class CommentFactory
 {
-    public function createComment($contributorName, $email, $text, $publicationDate, $parentId = null)
+    public function createComment($id, $contributorName, $email, $text, $publicationDate, $articleId, $parentId = null)
     {
-        return new Comment($contributorName, $email, $text, $publicationDate, $parentId);
+        return new Comment($id, $contributorName, $email, $text, $publicationDate, $articleId, $parentId);
     }
 }
 
