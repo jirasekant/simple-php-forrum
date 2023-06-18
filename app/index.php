@@ -26,7 +26,10 @@ $segments = explode('/', $requestUrl);
 $articleId = end($segments);
 // Fetch the article from the database using the $articleId
 // Display the article on the page
-if ($articleId) {
+if ($articleId == 'index.php') {
+    //header("Location: http://localhost");
+}
+else if ($articleId) {
     echo "This is the article with ID: " . $articleId;
     $result = $articleRepository->getArticleById($articleId);
     $commentResult = $commentRepository->getAllCommentsByArticleId($articleId);
@@ -35,12 +38,13 @@ if ($articleId) {
     print_r($commentResult);
 
     echo '<br><br>';
-    function printComments($comments, $parentID = null, $depth = 0) {
+    function printComments($comments, $parentID = null, $depth = 0)
+    {
         foreach ($comments as $comment) {
             if ($comment->getParentId() === $parentID) {
                 // Print the comment
                 echo str_repeat('-', $depth) . ' ' . $comment->getText() . '<br>';
-    
+
                 // Recursively print the replies
                 printComments($comments, $comment->getId(), $depth + 1);
             }
@@ -55,4 +59,36 @@ if ($articleId) {
     }
     echo "</h1>";
 }
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Get the form data
+    $article = new Article(
+        $_POST['title'],
+        $_POST['body'],
+        date("Y-m-d H:i:s"), // Use the current date and time
+        $_POST['user']
+    );
+    // Call the insertArticle function
+    $articleRepository->addArticle($article);
+}
 ?>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Article</title>
+</head>
+<body>
+    <h2>Add Article</h2>
+    <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="POST">
+        <label for="title">Title:</label><br>
+        <input type="text" id="title" name="title"><br><br>
+        
+        <label for="body">Body:</label><br>
+        <textarea id="body" name="body" rows="5" cols="30"></textarea><br><br>
+        
+        <label for="user">User:</label><br>
+        <input type="text" id="user" name="user"><br><br>
+        
+        <input type="submit" value="Submit">
+    </form>
+</body>
+</html>

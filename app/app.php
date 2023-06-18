@@ -9,7 +9,7 @@ class Article
 
     // Constructor, getters, and setters for the properties
     //constructor
-    public function __construct($id, $name, $text, $publicationDate, $contributorName)
+    public function __construct($name, $text, $publicationDate, $contributorName, $id = null)
     {
         $this->id = $id;
         $this->name = $name;
@@ -17,6 +17,7 @@ class Article
         $this->publicationDate = $publicationDate;
         $this->contributorName = $contributorName;
     }
+
     //getters for the properties
     public function getID()
     {
@@ -182,6 +183,17 @@ class Database
 
         return $data;
     }
+    public function insert(Article $article)
+    {
+        $title = $article->getName();
+        $body = $article->getText();
+        $user = $article->getPublicationDate();
+        $date_created = $article->getPublicationDate();
+        $stmt = $this->connection->prepare("INSERT INTO article (title, body, user, date_created) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("ssss", $title, $body, $user, $date_created);
+        $stmt->execute();
+        $stmt->close();
+    }
 }
 
 class ArticleDataMapper
@@ -228,7 +240,7 @@ class ArticleDataMapper
 
     public function insertArticle(Article $article)
     {
-        // Implementation details
+        $this->database->insert($article);
     }
 }
 
@@ -295,7 +307,8 @@ class ArticleRepository
 
     public function addArticle(Article $article)
     {
-        // Implementation details
+        $this->dataMapper->insertArticle($article);
+        header("Location: /");
     }
 }
 
@@ -328,7 +341,7 @@ class ArticleFactory
 {
     public function createArticle($id, $name, $text, $publicationDate, $contributorName)
     {
-        return new Article($id, $name, $text, $publicationDate, $contributorName);
+        return new Article($name, $text, $publicationDate, $contributorName, $id);
     }
 }
 
