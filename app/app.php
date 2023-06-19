@@ -131,9 +131,32 @@ class Comment
         $this->parentId = $parentId;
     }
 }
+class BindParam{
 
+    private $values = array(), $types = '';
+
+    
+
+    public function add( $type, &$value ){
+
+        $this->values[] = $value;
+
+        $this->types .= $type;
+
+    }
+
+    
+
+    public function get(){
+
+        return array_merge(array($this->types), $this->values);
+
+    }
+
+}
 class Database
 {
+    private $bindParam;
     private $host;
     private $username;
     private $password;
@@ -141,12 +164,13 @@ class Database
     private $connection;
 
     //Constructor
-    public function __construct($host, $username, $password, $databaseName)
+    public function __construct($host, $username, $password, $databaseName, BindParam $bindParam)
     {
         $this->host = $host;
         $this->username = $username;
         $this->password = $password;
         $this->databaseName = $databaseName;
+        $this->bindParam = $bindParam;
     }
 
     //Function to connect to the database
@@ -183,14 +207,14 @@ class Database
 
         return $data;
     }
-    public function insert(Article $article)
+    public function insert($query, $values)
     {
-        $title = $article->getName();
-        $body = $article->getText();
-        $user = $article->getPublicationDate();
-        $date_created = $article->getPublicationDate();
-        $stmt = $this->connection->prepare("INSERT INTO article (title, body, user, date_created) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("ssss", $title, $body, $user, $date_created);
+        $stmt = $this->connection->prepare($query);
+        foreach ($values as $value) {
+            $this->bindParam->add('s',$value);
+        }
+        $params = $this->bindParam->get();
+        $stmt->bind_param(...$params);
         $stmt->execute();
         $stmt->close();
     }
@@ -240,7 +264,13 @@ class ArticleDataMapper
 
     public function insertArticle(Article $article)
     {
-        $this->database->insert($article);
+        $values = [];
+        $values[0] = $article->getName();
+        $values[1] = $article->getText();
+        $values[2] = $article->getPublicationDate();
+        $values[3] = $article->getPublicationDate();
+        $query = "INSERT INTO article (title, body, user, date_created) VALUES (?,?,?,?)";
+        $this->database->insert($query, $values);
     }
 }
 
