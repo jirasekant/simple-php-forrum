@@ -72,7 +72,7 @@ class Comment
     // Constructor, getters, and setters for the properties
     //constructor
 
-    public function __construct($id, $contributorName, $email, $text, $publicationDate, $articleId, $parentId = null)
+    public function __construct($contributorName, $email, $text, $publicationDate, $articleId, $parentId = null, $id = null)
     {
         $this->contributorName = $contributorName;
         $this->email = $email;
@@ -108,6 +108,10 @@ class Comment
     {
         return $this->id;
     }
+    public function getArticleId()
+    {
+        return $this->articleId;
+    }
 
     //setters
     public function setContributorName($contributorName)
@@ -131,13 +135,15 @@ class Comment
         $this->parentId = $parentId;
     }
 }
-class BindParam{
+class BindParam
+{
 
     private $values = array(), $types = '';
 
-    
 
-    public function add( $type, &$value ){
+
+    public function add($type, &$value)
+    {
 
         $this->values[] = $value;
 
@@ -145,9 +151,10 @@ class BindParam{
 
     }
 
-    
 
-    public function get(){
+
+    public function get()
+    {
 
         return array_merge(array($this->types), $this->values);
 
@@ -211,7 +218,7 @@ class Database
     {
         $stmt = $this->connection->prepare($query);
         foreach ($values as $value) {
-            $this->bindParam->add('s',$value);
+            $this->bindParam->add('s', $value);
         }
         $params = $this->bindParam->get();
         $stmt->bind_param(...$params);
@@ -241,7 +248,7 @@ class ArticleDataMapper
         for ($i = 0; $i < count($queryResult); $i++) {
             $result[$i] = $this->articleFactory->createArticle(
                 $queryResult[$i]['id'], $queryResult[$i]['title'],
-                $queryResult[$i]['body'], $queryResult[$i]['user'], $queryResult[$i]['date_created']
+                $queryResult[$i]['body'], $queryResult[$i]['date_created'], $queryResult[$i]['user']
             );
         }
         return $result;
@@ -267,7 +274,7 @@ class ArticleDataMapper
         $values = [];
         $values[0] = $article->getName();
         $values[1] = $article->getText();
-        $values[2] = $article->getPublicationDate();
+        $values[2] = $article->getContributorName();
         $values[3] = $article->getPublicationDate();
         $query = "INSERT INTO article (title, body, user, date_created) VALUES (?,?,?,?)";
         $this->database->insert($query, $values);
@@ -302,9 +309,9 @@ class CommentDataMapper
             ->where('article_id = ' . $articleId)->execute($this->database);
         for ($i = 0; $i < count($queryResult); $i++) {
             $result[$i] = $this->commentFactory->createComment(
-                $queryResult[$i]['id'], $queryResult[$i]['user'], $queryResult[$i]['email'],
+                $queryResult[$i]['user'], $queryResult[$i]['email'],
                 $queryResult[$i]['text'], $queryResult[$i]['date_created'], $queryResult[$i]['article_id'],
-                $queryResult[$i]['parent_id']
+                $queryResult[$i]['parent_id'], $queryResult[$i]['id']
             );
         }
         return $result;
@@ -312,7 +319,19 @@ class CommentDataMapper
 
     public function insertComment(Comment $comment)
     {
-        // Implementation details
+        $values = [];
+        $values[0] = $comment->getContributorName();
+        $values[1] = $comment->getEmail();
+        $values[2] = $comment->getText();
+        $values[3] = $comment->getPublicationDate();
+        $values[4] = $comment->getParentId();
+        $values[5] = $comment->getArticleId();
+
+
+
+        $query = "INSERT INTO comment (user, email, text, date_created, parent_id, article_id) VALUES (?,?,?,?,?,?)";
+        $this->database->insert($query, $values);
+
     }
 }
 
@@ -363,7 +382,9 @@ class CommentRepository
 
     public function addComment(Comment $comment)
     {
-        // Implementation details
+        $this->dataMapper->insertComment($comment);
+        header("Location: /articles/" . $comment->getArticleId());
+        exit();
     }
 }
 
@@ -377,9 +398,9 @@ class ArticleFactory
 
 class CommentFactory
 {
-    public function createComment($id, $contributorName, $email, $text, $publicationDate, $articleId, $parentId = null)
+    public function createComment($contributorName, $email, $text, $publicationDate, $articleId, $parentId = null, $id = null)
     {
-        return new Comment($id, $contributorName, $email, $text, $publicationDate, $articleId, $parentId);
+        return new Comment($contributorName, $email, $text, $publicationDate, $articleId, $parentId, $id);
     }
 }
 
