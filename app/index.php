@@ -1,10 +1,13 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// import all the needed classes
+foreach (glob("classes/*.php") as $filename) {
+    include $filename;
+}
+// get current url
 $requestUrl = $_SERVER['REQUEST_URI'];
 
-require("app.php");
-$bindParam = new BindParam;
+// initialize all the used classes
+$bindParam = new BindParam();
 $database = new Database(
     'db',
     'php_docker',
@@ -22,26 +25,12 @@ $commentFactory = new CommentFactory();
 $commentDataMapper = new CommentDataMapper($database, $commentFactory, $queryBuilder);
 $commentRepository = new CommentRepository($commentDataMapper);
 
+// connect to the database
 $database->connect();
-$result = $articleRepository->getAllArticles();
 
-// Split the URL into separate segments
-$segments = explode('/', $requestUrl);
 
-// Assuming the article ID is the last segment of the URL
-$articleId = null;
-if (count($segments) > 2)
-    $articleId = $segments[2];
 
-// Fetch the article from the database using the $articleId
-// Display the article on the page
-if ($articleId == 'index.php' || $articleId == 'favicon.ico') {
-} else if ($articleId) {
-    $result = $articleRepository->getArticleById($articleId);
-    $commentResult = $commentRepository->getAllCommentsByArticleId($articleId);
-    echo '<h1>' . $result[0]->getName() . '<br></h1><b>' . $result[0]->getContributorName() . '</b> at ' . $result[0]->getPublicationDate() . '<br><br>' . $result[0]->getText() . '<br><br><br>';
-
-    function printComments($articleId, $comments, $parentID = null, $depth = 0)
+function printComments($articleId, $comments, $parentID = null, $depth = 0)
     {
         foreach ($comments as $comment) {
             if ($comment->getParentId() === $parentID) {
@@ -63,6 +52,33 @@ if ($articleId == 'index.php' || $articleId == 'favicon.ico') {
         }
     }
 
+
+
+
+
+// Split the URL into separate segments
+$segments = explode('/', $requestUrl);
+
+// Assuming the article ID is the last segment of the URL
+$articleId = null;
+if (count($segments) > 2)
+    $articleId = $segments[2];
+
+
+// Display the article on the page
+if ($articleId == 'index.php' || $articleId == 'favicon.ico') { // do nothing
+
+} else if ($articleId) { //print the article and comments underneath
+
+    // fetch the article from the database using the $articleId
+    $result = $articleRepository->getArticleById($articleId);
+    // fetch all the needed comments from the database using the $articleId
+    $commentResult = $commentRepository->getAllCommentsByArticleId($articleId);
+    // print the article
+    echo '<h1>' . $result[0]->getName() . '<br></h1><b>' . $result[0]->getContributorName() . '</b> at ' . $result[0]->getPublicationDate() . '<br><br>' . $result[0]->getText() . '<br><br><br>';
+
+
+    // if we're replying then set $parentId to the comment we're replying to, otherwise leave it as null
     $parentId = null;
     printComments($articleId, $commentResult);
     if (count($segments) > 3) {
@@ -70,68 +86,74 @@ if ($articleId == 'index.php' || $articleId == 'favicon.ico') {
     }
     echo '
     <body>
-    <h2>Add Comment</h2>
-    <form action="http://localhost/" method="POST">
-        <input type="hidden" name="commentSubmit" value="1">
-        <input type="hidden" name="articleId" value="' . $articleId . '">
-        <input type="hidden" name="parentId" value="' . $parentId . '">
+        <h2>Add Comment</h2>
+        <form action="http://localhost/" method="POST">
+            <input type="hidden" name="commentSubmit" value="1">
+            <input type="hidden" name="articleId" value="' . $articleId . '">
+            <input type="hidden" name="parentId" value="' . $parentId . '">
 
-        <label for="contributorName">Your Name:</label><br>
-        <input type="text" id="contributorName" name="contributorName"><br><br>
+            <label for="contributorName">Your Name:</label><br>
+            <input type="text" id="contributorName" name="contributorName"><br><br>
 
-        <label for="email">Email:</label><br>
-        <input type="text" id="email" name="email"><br><br>
+            <label for="email">Email:</label><br>
+            <input type="text" id="email" name="email"><br><br>
 
-        <label for="commentText">Comment:</label><br>
-        <textarea id="commentText" name="commentText" rows="5" cols="30"></textarea><br><br>
+            <label for="commentText">Comment:</label><br>
+            <textarea id="commentText" name="commentText" rows="5" cols="30"></textarea><br><br>
 
-        <input type="submit" value="Submit">
-    </form>
-</body>';
-} else {
+            <input type="submit" value="Submit">
+        </form>
+    </body>';
+
+
+
+} else { // print the front page
+    // get all the articles
+    $result = $articleRepository->getAllArticles();
     echo "<h1>Simple PHP Forum<br></h1><h2>Available articles:<br></h2><h3>";
     foreach ($result as $res) {
         echo '<a href="articles/' . $res->getID() . '">' . $res->getName() . '</a><br>';
     }
     echo "</h3>";
     echo '
-<body>
-    <h2>Add Article</h2>
-    <form action="' . htmlspecialchars($_SERVER["PHP_SELF"]) . '" method="POST">
-        <input type="hidden" name="articleSubmit" value="1">
-        <label for="title">Title:</label><br>
-        <input type="text" id="title" name="title"><br><br>
+    <body>
+        <h2>Add Article</h2>
+        <form action="' . htmlspecialchars($_SERVER["PHP_SELF"]) . '" method="POST">
+            <input type="hidden" name="articleSubmit" value="1">
+            <label for="title">Title:</label><br>
+            <input type="text" id="title" name="title"><br><br>
         
-        <label for="body">Body:</label><br>
-        <textarea id="body" name="body" rows="5" cols="30"></textarea><br><br>
+            <label for="body">Body:</label><br>
+            <textarea id="body" name="body" rows="5" cols="30"></textarea><br><br>
         
-        <label for="user">User:</label><br>
-        <input type="text" id="user" name="user"><br><br>
+            <label for="user">User:</label><br>
+            <input type="text" id="user" name="user"><br><br>
         
-        <input type="submit" value="Submit">
-    </form>
-</body>
-';
+            <input type="submit" value="Submit">
+        </form>
+    </body>';
+
 }
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Get the form data
-    if (isset($_POST['articleSubmit'])) {
+    // get the form data
+    if (isset($_POST['articleSubmit'])) { // article was submited
         $article = new Article(
             $_POST['title'],
             $_POST['body'],
-            date("Y-m-d H:i:s"), // Use the current date and time
+            date("Y-m-d H:i:s"), // use the current date and time
             $_POST['user']
         );
-        // Call the insertArticle function
+        // add the article
         $articleRepository->addArticle($article);
-    } else if (isset($_POST['commentSubmit'])) {
+
+    } else if (isset($_POST['commentSubmit'])) { // comment was submited
         $comment;
         if (!$_POST['parentId']) {
             $comment = new Comment(
                 $_POST['contributorName'],
                 $_POST['email'],
                 $_POST['commentText'],
-                date("Y-m-d H:i:s"), // Use the current date and time
+                date("Y-m-d H:i:s"), // use the current date and time
                 $_POST['articleId'],
             );
         } else {
@@ -139,12 +161,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_POST['contributorName'],
                 $_POST['email'],
                 $_POST['commentText'],
-                date("Y-m-d H:i:s"), // Use the current date and time
+                date("Y-m-d H:i:s"), // use the current date and time
                 $_POST['articleId'],
                 $_POST['parentId']
             );
         }
-
+        // add the comment
         $commentRepository->addComment($comment);
     }
 }
